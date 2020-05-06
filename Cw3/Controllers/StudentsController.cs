@@ -1,8 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Data.SqlClient;
 using System.Linq;
-using System.Threading.Tasks;
 using Cw3.Models;
 using Cw3.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -10,8 +7,9 @@ using Microsoft.AspNetCore.Mvc;
 namespace Cw3.Controllers
 {
 
-    [ApiController]
+    
     [Route("api/students")]
+    [ApiController]
     public class StudentsController : ControllerBase
     {
 
@@ -66,7 +64,7 @@ namespace Cw3.Controllers
                 
 
             }
-        // Cw 3
+            //Cw3
 
         [HttpPut("{id}")]
         public IActionResult UpdateStudentById([FromRoute]int id)

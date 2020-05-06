@@ -28,7 +28,8 @@ namespace Cw3
 
         {
 
-            services.AddScoped<IStudentsDal, SqlServerDbDal>();
+            services.AddSingleton<IStudentsDal, SqlServerDbDal>();
+            //services.AddScoped<IStudentsDal, SqlServerDbDal>();
 
             services.AddControllers();
         }
@@ -36,14 +37,17 @@ namespace Cw3
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
-            if (env.IsDevelopment())
-            {
-                app.UseDeveloperExceptionPage();
-            }
-
-            //app.UseHttpsRedirection();
+            app.UseDeveloperExceptionPage();
 
             app.UseRouting();
+
+            //Doklejal do odpowiedzi naglowek http
+            app.Use(async (context, c) =>
+            {
+                context.Response.Headers.Add("Secret", "1234");
+                await c.Invoke();
+            });
+            app.UseMiddleware<CustMiddleware>();
 
             app.UseAuthorization();
 
