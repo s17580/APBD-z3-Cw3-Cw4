@@ -84,5 +84,6 @@ namespace Cw3.Controllers
             return Ok(_dbService.GetStudentEnrollments(IndexNumber));
         }
 
-            }
     }
+    
+}

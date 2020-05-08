@@ -56,7 +56,7 @@ namespace Cw3.Services
                                 {
                                     IdStudy = int.Parse(dr["IdStudy"].ToString()),
                                     Name = dr["Name"].ToString()
-                                } 
+                                }
                             },
 
                         });
@@ -107,15 +107,15 @@ namespace Cw3.Services
                             },
                             StartDate = dr["StartDate"].ToString()
                         });
+                    }
+
                 }
-                
+
             }
-            
+
+            return list.First();
+
         }
-
-         return list.First();   
-
-            }
         private void CreateEnrollment(SqlCommand cmd, int idStudy)
         {
             cmd.CommandText = @"INSERT INTO Enrollment (IdEnrollment, Semester, IdStudy, 
@@ -127,7 +127,8 @@ namespace Cw3.Services
 
         private StudyEnrollment FindEnrollmentByIdStudies(SqlCommand cmd, int idStudy, int semester)
         {
-            cmd.CommandText = @"SELECT * FROM Enrollment e INNER JOIN Studies s ON e.IdStudy = s.IdStudy WHERE e.Semester = @Semester AND e.IdStudy = @IdStudy";
+            cmd.CommandText = @"SELECT * FROM Enrollment e INNER JOIN Studies s ON e.IdStudy = s.IdStudy 
+                              WHERE e.Semester = @Semester AND e.IdStudy = @IdStudy";
 
             cmd.Parameters.AddWithValue("IdStudy", idStudy);
             cmd.Parameters.AddWithValue("Semester", semester);
@@ -207,8 +208,9 @@ namespace Cw3.Services
 
                     dr.Close();
 
-                    // Dodanie studenta
-                    com.CommandText = "INSERT INTO Student(IndexNumber, FirstName, LastName, BirthDate, IdEnrollment) VALUES (@Index, @Fname, @LName, @Bdate, @IdEnrollment)";
+                    // Dodanie nowego studenta
+                    com.CommandText = "INSERT INTO Student(IndexNumber, FirstName, LastName, BirthDate, IdEnrollment) " +
+                                        "VALUES (@Index, @Fname, @LName, @Bdate, @IdEnrollment)";
                     com.Parameters.AddWithValue("Index", req.IndexNumber);
                     com.Parameters.AddWithValue("Fname", req.FirstName);
                     com.Parameters.AddWithValue("Lname", req.LastName);
@@ -284,5 +286,19 @@ namespace Cw3.Services
             }
         }
 
+        public bool IsStudentExist(string indexNumber)
+        {
+            var sql = @"SELECT 1 FROM Student WHERE IndexNumber = @IndexNumber";
+            using (var con = new SqlConnection(SqlConnect))
+            using (var cmd = new SqlCommand(sql, con))
+            {
+                con.Open();
+                cmd.Parameters.AddWithValue("IndexNumber", indexNumber);
+                var dr = cmd.ExecuteReader();
+                return dr.Read();
+
+            }
+
+        }
     }
 }

@@ -14,7 +14,8 @@ namespace Cw3.Services
         public StudyEnrollment GetStudentEnrollments(string IndexNumber);
         public StudyEnrollment EnrollmentStudent(EnrollmentStudentReq req);
         public StudyEnrollment PromotionStudents(PromotionStudentsReq req);
-        }
+        public bool IsStudentExist(string indexNumber);
+    }
         //public Student CreateStudent();
         //public Student UpdateStudentById();
         //public Student DeleteStudentById();
