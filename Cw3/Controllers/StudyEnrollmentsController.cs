@@ -3,8 +3,9 @@ using System.Linq;
 using Microsoft.AspNetCore.Mvc;
 using Cw3.Models;
 using Cw3.Services;
-using Cw3.DTOs.Req;
-using Cw3.DTOs.Resp;
+using Cw3.ReqResp.Req;
+using Cw3.ApiExceptions;
+
 
 namespace Cw3.Controllers
 {
@@ -22,21 +23,34 @@ namespace Cw3.Controllers
         [HttpPost]
         public IActionResult EnrollmentStudent(EnrollmentStudentReq req)
         {
-            var resp = _dbService.EnrollmentStudent(req);
-            if (resp.success)
+            try
             {
-                var enroll = new StudyEnrollment
-                {
-                    IdEnrollment = resp.IdEnrollment,
-                    Semester = resp.Semester,
-                    IdStudy = resp.IdStudy,
-                    StartDate = resp.StartDate.ToShortDateString()
-                };
-                return Ok(enroll);
+                StudyEnrollment enroll = _dbService.EnrollmentStudent(req);
+                String uris = $"/api/enrollments/{enroll.IdEnrollment}";
+                return Created(uris, enroll);
             }
-            else
+            catch (StudiesNotFoundException)
             {
-                return StatusCode(resp.statCode, resp.errMessage);
+                return BadRequest("Nie można wyszukać podanych studentów");
+            }
+            catch (StudentAlreadyExistsException)
+            {
+                return BadRequest("Student o podanym numerze indeksu istnieje");
+            }
+        }
+
+        [HttpPost("promotions")]
+        public IActionResult PromotionStudent(PromotionStudentsReq req)
+        {
+            try
+            {
+                StudyEnrollment enroll = _dbService.PromotionStudents(req);
+                String uris = $"/api/enrollments/{enroll.IdEnrollment}";
+                return Created(uris, enroll);
+            }
+            catch (StudyEnrollmentNotFoundException)
+            {
+                return NotFound();
             }
         }
     }

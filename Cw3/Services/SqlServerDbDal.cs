@@ -3,10 +3,11 @@ using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Linq;
+using System.Data;
 using System.Threading.Tasks;
-using Cw3.DTOs.Req;
-using Cw3.DTOs.Resp;
+using Cw3.ReqResp.Req;
 using Microsoft.AspNetCore.Http;
+using Cw3.ApiExceptions;
 
 namespace Cw3.Services
 {
@@ -42,12 +43,21 @@ namespace Cw3.Services
 
                         {
 
-
+                            IndexNumber = dr["IndexNumber"].ToString(),
                             FirstName = dr["FirstName"].ToString(),
                             LastName = dr["LastName"].ToString(),
                             BirthDate = dr["BirthDate"].ToString(),
-                            NameOfStudy = dr["Name"].ToString(),
-                            Semester = int.Parse(dr["Semester"].ToString()),
+                            Enrollment = new StudyEnrollment
+                            {
+                                IdEnrollment = int.Parse(dr["IdEnrollment"].ToString()),
+                                Semester = int.Parse(dr["Semester"].ToString()),
+                                StartDate = dr["StartDate"].ToString(),
+                                Study = new Stud
+                                {
+                                    IdStudy = int.Parse(dr["IdStudy"].ToString()),
+                                    Name = dr["Name"].ToString()
+                                } 
+                            },
 
                         });
                     }
@@ -87,15 +97,16 @@ namespace Cw3.Services
 
                         list.Add(new StudyEnrollment
 
-                        { 
-
-                        IdEnrollment = int.Parse(dr["IdEnrollment"].ToString()),
-                        Semester = int.Parse(dr["Semester"].ToString()),
-                        IdStudy = int.Parse(dr["IdStudy"].ToString()),
-                      //NameOfStudy = dr["Name"].ToString(),
-                        StartDate = dr["StartDate"].ToString(),
-                    });
-                    
+                        {
+                            IdEnrollment = int.Parse(dr["IdEnrollment"].ToString()),
+                            Semester = int.Parse(dr["Semester"].ToString()),
+                            Study = new Stud
+                            {
+                                IdStudy = int.Parse(dr["IdStudy"].ToString()),
+                                Name = dr["StudiesName"].ToString()
+                            },
+                            StartDate = dr["StartDate"].ToString()
+                        });
                 }
                 
             }
@@ -105,150 +116,173 @@ namespace Cw3.Services
          return list.First();   
 
             }
-        public EnrollmentStudentResp EnrollmentStudent(EnrollmentStudentReq req)
+        private void CreateEnrollment(SqlCommand cmd, int idStudy)
         {
-            var stud = new Student();
-            stud.FirstName = req.FirstName;
+            cmd.CommandText = @"INSERT INTO Enrollment (IdEnrollment, Semester, IdStudy, 
+                              GETDATE()) VALUES ((SELECT 1+MAX(IdEnrollment) FROM Enrollment), @Semester, @IdStudy)";
+            cmd.Parameters.AddWithValue("Semester", 1);
+            cmd.Parameters.AddWithValue("IdStudy", idStudy);
+            cmd.ExecuteNonQuery();
+        }
 
-            using (var connect = new SqlConnection(SqlConnect))
-            using (var command = new SqlCommand())
+        private StudyEnrollment FindEnrollmentByIdStudies(SqlCommand cmd, int idStudy, int semester)
+        {
+            cmd.CommandText = @"SELECT * FROM Enrollment e INNER JOIN Studies s ON e.IdStudy = s.IdStudy WHERE e.Semester = @Semester AND e.IdStudy = @IdStudy";
+
+            cmd.Parameters.AddWithValue("IdStudy", idStudy);
+            cmd.Parameters.AddWithValue("Semester", semester);
+            var dr = cmd.ExecuteReader();
+
+            if (!dr.Read())
             {
-                command.Connection = connect;
+                throw new StudyEnrollmentNotFoundException();
+            }
 
-                connect.Open();
-                var transac = connect.BeginTransaction();
+            var enroll = new StudyEnrollment
+            {
+                IdEnrollment = (int)dr["IdEnrollment"],
+                Semester = (int)dr["Semester"],
+                StartDate = dr["StartDate"].ToString(),
+                Study = new Stud
+                {
+                    IdStudy = idStudy,
+                    Name = dr["Name"].ToString()
+                },
+            };
+
+            dr.Close();
+            return enroll;
+        }
+
+        public StudyEnrollment EnrollmentStudent(EnrollmentStudentReq req)
+        {
+            var st = new Student();
+            st.FirstName = req.FirstName;
+
+            using (var con = new SqlConnection(SqlConnect))
+            using (var com = new SqlCommand())
+            {
+                com.Connection = con;
+
+                con.Open();
+                var tran = con.BeginTransaction();
 
                 try
                 {
-                    command.Transaction = transac;
-                    command.CommandText = "SELECT IdStudy FROM studies WHERE name = @name";
-                    command.Parameters.AddWithValue("name", req.Studies);
+                    com.Transaction = tran;
+                    com.CommandText = "SELECT IdStudy FROM studies WHERE name = @name";
+                    com.Parameters.AddWithValue("name", req.Studies);
 
-                    var dr = command.ExecuteReader();
+                    var dr = com.ExecuteReader();
                     if (!dr.Read())
                     {
-                        return new EnrollmentStudentResp
-                        {
-                            success = false,
-                            errMessage = "Nie ma takich studiow",
-                            statCode = StatusCodes.Status400BadRequest
-                        };
+                        throw new StudiesNotFoundException();
                     }
+
                     int idstudy = (int)dr["IdStudy"];
-
-                    command.CommandText = "SELECT TOP 1 * FROM enrollment WHERE IdStudy = @idstudy AND Semester = 1 ORDER BY StartDate DESC";
-                    command.Parameters.AddWithValue("idstudy", idstudy);
-
-                    int enrollmentId;
-                    dr.Close();
-                    dr = command.ExecuteReader();
-                    if (!dr.Read())
-                    {
-                        command.CommandText = "SELECT MAX(IdEnrollment) AS id FROM Enrollment";
-                        dr = command.ExecuteReader();
-                        int nextId = ((int)dr["id"]) + 1;
-
-                        command.CommandText = "INSERT INTO Enrollment VALUES(@nextId, 1, @idstudy, GETDATE())";
-                        int affectedRows = command.ExecuteNonQuery();
-
-                        if (affectedRows == 1)
-                        {
-                            enrollmentId = nextId;
-                        }
-                        else
-                        {
-                            transac.Rollback();
-
-                            return new EnrollmentStudentResp
-                            {
-                                success = false,
-                                errMessage = "Cos poszlo nie tak",
-                                statCode = StatusCodes.Status500InternalServerError
-                            };
-                        }
-                    }
-                    else
-                    {
-                        enrollmentId = (int)dr["IdEnrollment"];
-                    }
-
                     dr.Close();
 
-                    command.CommandText = "SELECT * FROM Student WHERE IndexNumber = @IndexNumber";
-                    command.Parameters.AddWithValue("IndexNumber", req.IndexNumber);
-                    dr = command.ExecuteReader();
+                    StudyEnrollment enroll;
+
+                    try
+                    {
+                        enroll = FindEnrollmentByIdStudies(com, idstudy, 1);
+                    }
+                    catch (StudiesNotFoundException)
+                    {
+                        CreateEnrollment(com, idstudy);
+                        enroll = FindEnrollmentByIdStudies(com, idstudy, 1);
+                    }
+
+                    com.CommandText = "SELECT * FROM Student WHERE IndexNumber = @IndexNumber";
+                    com.Parameters.AddWithValue("IndexNumber", req.IndexNumber);
+                    dr = com.ExecuteReader();
 
                     if (dr.Read())
                     {
                         dr.Close();
-                        transac.Rollback();
-
-                        return new EnrollmentStudentResp
-                        {
-                            success = false,
-                            errMessage = "Student o tym numerze indeksu juz istnieje",
-                            statCode = StatusCodes.Status400BadRequest
-                        };
+                        tran.Rollback();
+                        throw new StudentAlreadyExistsException();
                     }
 
                     dr.Close();
 
-                    // Dodawanie studenta
-                    command.CommandText = "INSERT INTO Student(IndexNumber, FirstName, LastName, BirthDate, IdEnrollment) VALUES (@Index, @Fname, @LName, @Bdate, @IdEnrollment)";
-                    command.Parameters.AddWithValue("Index", req.IndexNumber);
-                    command.Parameters.AddWithValue("Fname", req.FirstName);
-                    command.Parameters.AddWithValue("Lname", req.LastName);
-                    command.Parameters.AddWithValue("Bdate", req.BirthDate);
-                    command.Parameters.AddWithValue("IdEnrollment", enrollmentId);
-                    command.ExecuteNonQuery();
+                    // Dodanie studenta
+                    com.CommandText = "INSERT INTO Student(IndexNumber, FirstName, LastName, BirthDate, IdEnrollment) VALUES (@Index, @Fname, @LName, @Bdate, @IdEnrollment)";
+                    com.Parameters.AddWithValue("Index", req.IndexNumber);
+                    com.Parameters.AddWithValue("Fname", req.FirstName);
+                    com.Parameters.AddWithValue("Lname", req.LastName);
+                    com.Parameters.AddWithValue("Bdate", req.BirthDate);
+                    com.Parameters.AddWithValue("IdEnrollment", enroll.IdEnrollment);
+                    com.ExecuteNonQuery();
 
-                    transac.Commit();
+                    tran.Commit();
 
-
-                    command.CommandText = "SELECT * FROM Enrollment WHERE IdEnrollment = @enrollmentId";
-                    command.Parameters.AddWithValue("enrollmentId", enrollmentId);
-                    dr = command.ExecuteReader();
-
-                    if (dr.Read())
-                    {
-                        return new EnrollmentStudentResp
-                        {
-                            success = true,
-                            statCode = StatusCodes.Status201Created,
-                            IdEnrollment = (int)dr["IdEnrollment"],
-                            IdStudy = (int)dr["IdStudy"],
-                            Semester = (int)dr["Semester"],
-                            StartDate = (DateTime)dr["StartDate"]
-                        };
-                    }
-                    else
-                    {
-                        return new EnrollmentStudentResp
-                        {
-                            success = false,
-                            errMessage = "Cos poszlo nie tak",
-                            statCode = StatusCodes.Status500InternalServerError
-                        };
-                    }
+                    return enroll;
                 }
-                catch (SqlException exc)
+                catch (SqlException)
                 {
-                    transac.Rollback();
-
-                    return new EnrollmentStudentResp
-                    {
-                        success = false,
-                        errMessage = exc.Message,
-                        statCode = StatusCodes.Status500InternalServerError
-                    };
+                    tran.Rollback();
+                    throw new Exception("Coś poszło nie tak");
                 }
             }
-
         }
 
-        public void PromotionStudents(int semester, string studies)
+        private StudyEnrollment FindEnrollmentBySemesterAndStudies(SqlCommand cmd, string studyName, int semester)
         {
-            throw new NotImplementedException();
+            cmd.CommandType = CommandType.Text;
+            cmd.CommandText = @"SELECT * FROM Enrollment E RIGHT JOIN Studies S ON (S.IdStudy = E.IdStudy AND S.Name = @Name) WHERE Semester = @Semester";
+
+            cmd.Parameters.Clear();
+            cmd.Parameters.AddWithValue("Name", studyName);
+            cmd.Parameters.AddWithValue("Semester", semester);
+            var dr = cmd.ExecuteReader();
+
+            if (!dr.Read())
+            {
+                throw new StudiesNotFoundException();
+            }
+
+            var enroll = new StudyEnrollment
+            {
+                IdEnrollment = (int)dr["IdEnrollment"],
+                Semester = (int)dr["Semester"],
+                StartDate = dr["StartDate"].ToString(),
+                Study = new Stud
+                {
+                    IdStudy = (int)dr["IdStudy"],
+                    Name = dr["Name"].ToString()
+                },
+            };
+
+            dr.Close();
+
+            return enroll;
         }
+
+        public StudyEnrollment PromotionStudents(PromotionStudentsReq req)
+        {
+            using (var conn = new SqlConnection(SqlConnect))
+            using (var cmd = new SqlCommand())
+            {
+                conn.Open();
+                cmd.Connection = conn;
+
+                FindEnrollmentBySemesterAndStudies(cmd, req.Studies, req.Semester);
+
+                cmd.CommandText = @"PromotionStudents";
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Clear();
+                cmd.Parameters.AddWithValue("@Studies", req.Studies);
+                cmd.Parameters.AddWithValue("@Semester", req.Semester);
+                cmd.Parameters.AddWithValue("@NewIdEnrollment", 0);
+                cmd.ExecuteNonQuery();
+
+                int newSemester = req.Semester + 1;
+
+                return FindEnrollmentBySemesterAndStudies(cmd, req.Studies, newSemester);
+            }
+        }
+
     }
 }

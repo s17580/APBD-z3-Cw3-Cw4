@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace Cw3.DTOs.Req
+namespace Cw3.ReqResp.Req
 {
     public class EnrollmentStudentReq
     {

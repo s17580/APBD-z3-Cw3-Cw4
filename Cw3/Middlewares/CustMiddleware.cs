@@ -8,17 +8,17 @@ namespace Cw3
 {
     public class CustMiddleware
     {
-        private RequestDelegate _next;
-        public CustMiddleware(RequestDelegate next)
+        private RequestDelegate _nex;
+        public CustMiddleware(RequestDelegate nex)
         {
-            _next = next;
+            _nex = nex;
         }
 
-        public async Task InvokeAsync(HttpContext context)
+        public async Task InvokeAsync(HttpContext cont)
         {
-            context.Response.Headers.Add("Cos", "123");
+            cont.Response.Headers.Add("Coś tam", "12345");
 
-            await _next.Invoke(context); //odpalam kolejny middleware
+            await _nex.Invoke(cont); 
         }
     }
 }
