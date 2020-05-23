@@ -10,7 +10,6 @@ namespace Cw3.Middlewares
     public class FileLogMiddleware : ILogMiddleware
     {
 
-
         public const string LogFilePath = @"acc.log";
 
         public async Task InvokeAsync(HttpContext httpContext, RequestDelegate nex)

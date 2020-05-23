@@ -15,6 +15,9 @@ namespace Cw3.Services
         public StudyEnrollment EnrollmentStudent(EnrollmentStudentReq req);
         public StudyEnrollment PromotionStudents(PromotionStudentsReq req);
         public bool IsStudentExist(string indexNumber);
+        public Student GetStudentByIndexNumber(string indexNumber);
+        public Student GetStudentByRefreshToken(string refTok);
+        public int SetStudentRefreshToken(SetStudRefTokReq req);
     }
         //public Student CreateStudent();
         //public Student UpdateStudentById();

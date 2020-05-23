@@ -1,4 +1,4 @@
-using System;
+ï»¿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -12,7 +12,10 @@ using Microsoft.Extensions.Logging;
 using Cw3.Services;
 using Cw3.Middlewares;
 using Microsoft.AspNetCore.Http;
-
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 namespace Cw3
 {
@@ -27,12 +30,23 @@ namespace Cw3
 
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
-
         {
-
             services.AddSingleton<IStudentsDal, SqlServerDbDal>();
-            //services.AddScoped<IStudentsDal, SqlServerDbDal>();
             services.AddTransient<ILogMiddleware, FileLogMiddleware>();
+            //Zestaw 7
+            services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+                .AddJwtBearer(options =>
+                {
+                    options.TokenValidationParameters = new TokenValidationParameters
+                    {
+                        ValidateIssuer = true,
+                        ValidateAudience = true,
+                        ValidateLifetime = true,
+                        ValidIssuer = "Gakko",
+                        ValidAudience = "Students",
+                        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Configuration["SecretKey"]))
+                    };
+                });
             services.AddControllers();
         }
 
@@ -51,7 +65,7 @@ namespace Cw3
                 if (!contx.Request.Headers.ContainsKey("Index"))
                 {
                     contx.Response.StatusCode = StatusCodes.Status401Unauthorized;
-                    await contx.Response.WriteAsync("W nag³owkach nie znajduje siê numer indexu studenta.");
+                    await contx.Response.WriteAsync("W naglowkach nie znajduje sie numer indexu studenta.");
                     return;
                 }
 
@@ -67,7 +81,7 @@ namespace Cw3
             });
 
             app.UseRouting();
-
+            app.UseAuthentication();
             app.UseAuthorization();
 
             app.UseEndpoints(endpoints =>

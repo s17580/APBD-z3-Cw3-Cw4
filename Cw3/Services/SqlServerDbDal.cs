@@ -300,5 +300,85 @@ namespace Cw3.Services
             }
 
         }
+        public Student GetStudentByIndexNumber(string indexNumber)
+        {
+            using SqlConnection connection = new SqlConnection(SqlConnect);
+            using SqlCommand command = new SqlCommand
+            {
+                Connection = connection,
+                CommandText = "SELECT s.*, RoleName " +
+                                    "FROM Student s " +
+                                    "JOIN StudentRole sr " +
+                                    "ON s.IdRole = sr.IdRole " +
+                                    "WHERE s.indexNumber = @indexNumber"
+            };
+            command.Parameters.AddWithValue("indexNumber", indexNumber);
+
+            connection.Open();
+            SqlDataReader dr = command.ExecuteReader();
+            if (dr.Read())
+            {
+                return new Student
+                {
+                    IndexNumber = dr["IndexNumber"].ToString(),
+                    FirstName = dr["FirstName"].ToString(),
+                    LastName = dr["LastName"].ToString(),
+                    BirthDate = dr["BirthDate"].ToString(),
+                    Password = dr["password"].ToString(),
+                    Salt = dr["salt"].ToString(),
+                    Role = dr["roleName"].ToString()
+                };
+            }
+
+            return null;
+        }
+
+        public int SetStudentRefreshToken(SetStudRefTokReq req)
+        {
+            using SqlConnection connection = new SqlConnection(SqlConnect);
+            using SqlCommand command = new SqlCommand
+            {
+                Connection = connection,
+                CommandText = "UPDATE Student SET refreshToken = @RefreshToken WHERE indexNumber = @IndexNumber"
+            };
+            command.Parameters.AddWithValue("refreshToken", req.RefreshToken);
+            command.Parameters.AddWithValue("indexNumber", req.IndexNumber);
+
+            connection.Open();
+            return command.ExecuteNonQuery();
+        }
+
+        public Student GetStudentByRefreshToken(string refTok)
+        {
+            using SqlConnection connection = new SqlConnection(SqlConnect);
+            using SqlCommand command = new SqlCommand
+            {
+                Connection = connection,
+                CommandText = "SELECT s.*, sr.RoleName " +
+                                "FROM Student s " +
+                                "JOIN StudentRole sr " +
+                                "ON s.IdRole = sr.IdRole " +
+                                "WHERE s.refreshToken = @refreshToken"
+            };
+            command.Parameters.AddWithValue("refreshToken", refTok);
+
+            connection.Open();
+            SqlDataReader dr = command.ExecuteReader();
+            if (dr.Read())
+            {
+                return new Student
+                {
+                    IndexNumber = dr["IndexNumber"].ToString(),
+                    FirstName = dr["FirstName"].ToString(),
+                    LastName = dr["LastName"].ToString(),
+                    BirthDate = dr["BirthDate"].ToString(),
+                    Password = dr["password"].ToString(),
+                    Salt = dr["salt"].ToString(),
+                    Role = dr["roleName"].ToString()
+                };
+            }
+
+            return null;
+        }
     }
 }

@@ -5,6 +5,7 @@ using Cw3.Models;
 using Cw3.Services;
 using Cw3.ReqResp.Req;
 using Cw3.ApiExceptions;
+using Microsoft.AspNetCore.Authorization;
 
 
 namespace Cw3.Controllers
@@ -21,6 +22,7 @@ namespace Cw3.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "employee")]
         public IActionResult EnrollmentStudent(EnrollmentStudentReq req)
         {
             try
@@ -31,7 +33,7 @@ namespace Cw3.Controllers
             }
             catch (StudiesNotFoundException)
             {
-                return BadRequest("Nie można wyszukać podanych studentów");
+                return  BadRequest("Nie można wyszukać podanych studentów");
             }
             catch (StudentAlreadyExistsException)
             {
@@ -40,6 +42,7 @@ namespace Cw3.Controllers
         }
 
         [HttpPost("promotions")]
+        [Authorize(Roles = "employee")]
         public IActionResult PromotionStudent(PromotionStudentsReq req)
         {
             try
